@@ -1,37 +1,17 @@
-import { Image, StyleSheet, Text, View } from "react-native";
-import { Screen } from "./src/components/Screen";
-
-const styles = StyleSheet.create({
-  title: {
-    color: "white",
-    marginTop: 60,
-    marginLeft: 20,
-    fontSize: 24,
-  },
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  image: {
-    width: 200,
-    height: 200,
-  },
-});
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthProvider } from "./src/auth/AuthContext";
+import { RootNavigator } from "./src/navigation/RootNavigator";
 
 export default function App() {
   return (
-    <Screen backgroundColor="#111827">
-      <Text style={styles.title}>Hello</Text>
-
-      <View style={styles.container}>
-        <Image
-          source={require("./assets/cortisol.png")}
-          style={styles.image}
-          resizeMode="contain"
-        />
-      </View>
-    </Screen>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
-
