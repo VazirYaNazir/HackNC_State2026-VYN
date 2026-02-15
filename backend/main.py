@@ -1,168 +1,109 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
-import ai_engine
-import instaloader
-import pickle
-import os
 import time
 import random
-
-# --- CONFIGURATION ---
-SESSION_FILENAME = "session-quackpromax"
-CACHE_DURATION = 300  # 5 Minutes (Seconds)
+import ai_engine
 
 app = FastAPI()
 
-# --- 1. SETUP INSTALOADER & SESSION ---
-L = instaloader.Instaloader()
+USE_MOCK_ONLY = True 
 
-# Load the session safely on startup
-if os.path.exists(SESSION_FILENAME):
-    try:
-        with open(SESSION_FILENAME, 'rb') as f:
-            data = pickle.load(f)
-        
-        # Handle Dictionary Format (New Instaloader)
-        if isinstance(data, dict):
-            L.context._session.cookies.update(data)
-            # Try to get username from cookies, default to filename
-            username = data.get('ds_user_id', SESSION_FILENAME)
-            print(f"Logged in via Session Dictionary (User: {username})")
-        
-        # Handle Object Format (Old Instaloader)
-        else:
-            L.load_session_from_file("quackpromax", filename=SESSION_FILENAME)
-            print(f"Logged in via Session Object (User: {L.context.username})")
-            
-    except Exception as e:
-        print(f"Session Load Error: {e}. Scraper will likely fail.")
-else:
-    print(f"Session file '{SESSION_FILENAME}' not found in backend/ folder!")
-
-# --- 2. GLOBAL CACHE VARIABLES ---
-CACHED_FEED = []
-LAST_FETCH_TIME = 0
-
-# --- 3. DATA MODELS ---
+# --- 2. DATA MODELS ---
 class PostData(BaseModel):
     id: str
     username: str
     image_url: str
     caption: str
     likes: int
-    risk_score: int = 0      # Default 0
-    flag: str = "Analyzing"  # Default status
+    risk_score: int = 0
+    flag: str = "Analyzing"
 
-# --- 4. HELPER: MOCK FEED (Fallback) ---
+# --- 3. THE "GOLDEN" DATASET ---
+# These posts cover all your edge cases: Safe, Scam, and Borderline.
 def get_mock_feed():
-    print("Serving MOCK FEED (Safety Net)")
     return [
-        {
-            "id": "mock_1",
-            "username": "tech_crunch_official",
-            "image_url": "https://images.unsplash.com/photo-1518770660439-4636190af475",
-            "caption": "Quantum computing breakthrough announced today! 🖥️ #tech",
-            "likes": 5200,
-            "risk_score": 5,
-            "flag": "Verified Source"
-        },
-        {
-            "id": "mock_scam_1",
-            "username": "elon_giveaway_x",
-            "image_url": "https://placehold.co/600x600/red/white?text=SCAM",
-            "caption": "URGENT: Doubling all BTC sent to this address! #giveaway",
-            "likes": 12000,
-            "risk_score": 99,
-            "flag": "SCAM DETECTED"
-        }
-    ]
-
-# --- 6. MAIN ENDPOINT ---
-@app.get("/feed")
-def get_feed():
-    global CACHED_FEED, LAST_FETCH_TIME
-    
-    current_time = time.time()
-    
-    # A. CHECK CACHE (Is data fresh?)
-    if CACHED_FEED and (current_time - LAST_FETCH_TIME < CACHE_DURATION):
-        print(f"CACHE HIT: Serving feed from {int(current_time - LAST_FETCH_TIME)}s ago")
-        return CACHED_FEED
-
-    print("CACHE EXPIRED: Fetching fresh data from Instagram...")
-    fresh_feed = []
-
-    # B. SCRAPE REAL INSTAGRAM (Home Feed)
-    try:
-        # Get posts from the timeline
-        home_feed = L.context.get_feed_posts()
-        
-        count = 0
-        for post in home_feed:
-            if count >= 8: break # STOP at 8 to prevent bans
-            
-            fresh_feed.append({
-                "id": post.shortcode,
-                "username": post.owner_username,
-                "image_url": post.url, # Expires in ~4 hours
-                "caption": post.caption[:150] + "..." if post.caption else "",
-                "likes": post.likes,
-                # Placeholders (AI will fill these next)
-                "risk_score": 0,
-                "flag": "Pending"
-            })
-            count += 1
-        
-        print(f"Scraped {len(fresh_feed)} real posts.")
-
-    except Exception as e:
-        print(f"SCRAPE FAILED: {e}")
-        # If scrape fails, use the old cache if it exists, otherwise use Mock
-        if CACHED_FEED:
-            print("Returning Stale Cache instead.")
-            return CACHED_FEED
-        return get_mock_feed()
-
-    # C. INJECT FAKE SCAMS (Crucial for Demo)
-    scam_posts = [
+        # SCAM 1: The obvious crypto scam
         {
             "id": "demo_scam_1",
-            "username": "fake_support_agent",
-            "image_url": "https://placehold.co/600x600/orange/white?text=Phishing",
-            "caption": "Your account is locked. Click bio to verify identity immediately. 🔒",
+            "username": "elon_giveaway_official",
+            # Use a placeholder or a real hosted image you control
+            "image_url": "https://placehold.co/600x600/red/white?text=BTC+GIVEAWAY", 
+            "caption": "URGENT: Doubling all BTC sent to my wallet! Link in bio! 🚀🔴 #crypto #giveaway #tesla",
+            "likes": 5200,
+            "risk_score": 0, # AI will calculate this
+            "flag": "Pending"
+        },
+        # SAFE 1: Standard Tech News
+        {
+            "id": "demo_safe_1",
+            "username": "tech_crunch",
+            "image_url": "https://images.unsplash.com/photo-1519389950473-47ba0277781c",
+            "caption": "Breaking: OpenAI releases GPT-5 preview. The new model is 10x faster and safer. #ai #tech #future",
+            "likes": 15400,
+            "risk_score": 0,
+            "flag": "Pending"
+        },
+        # SCAM 2: Phishing/Support Scam
+        {
+            "id": "demo_scam_2",
+            "username": "instagram_support_team",
+            "image_url": "https://placehold.co/600x600/orange/white?text=Acct+Locked", 
+            "caption": "Your account has been locked due to suspicious activity. Click the link in our bio to verify your identity or your account will be deleted in 24 hours. 🔒",
             "likes": 45,
             "risk_score": 0,
             "flag": "Pending"
         },
+        # SAFE 2: Lifestyle/Travel
         {
-            "id": "demo_scam_2",
-            "username": "crypto_whale_99",
-            "image_url": "https://coingape.com/wp-content/uploads/2023/11/Earn-Free-Ethereum.jpg",
-            "caption": "Sending 1000 ETH to random followers! DM me 'WIN' now! 🚀",
-            "likes": 5040,
+            "id": "demo_safe_2",
+            "username": "travel_weekly",
+            "image_url": "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1",
+            "caption": "Top 10 destinations to visit in Switzerland this winter. 🏔️🇨🇭 #travel #wanderlust",
+            "likes": 8900,
             "risk_score": 0,
             "flag": "Pending"
         }
     ]
+
+# --- 4. MAIN ENDPOINT ---
+@app.get("/feed")
+def get_feed():
+    print("⚡ Request received. Serving Simulation Feed...")
     
-    # Combine Real + Fake
-    full_list = fresh_feed + scam_posts
-    random.shuffle(full_list)
+    # 1. Get the Raw Data
+    feed = get_mock_feed()
     
-    # D. RUN AI ANALYSIS
+    # 2. Run Real-Time Analysis
     analyzed_feed = []
-    for post in full_list:
-        # Call the AI Engine
-        caption_AI = ai_engine.scan_post_caption(post["caption"])
-        
-        # Update the post
-        post['risk_score'] = caption_AI
-        post['flag'] = "SCAM DETECTED" if caption_AI > 75 else "No Flags"
+    
+    for post in feed:
+        # Check if AI is available
+        if ai_engine:
+            try:
+                print(f"   Running AI on post: {post['id']}...")
+                risk_score = ai_engine.scan_post_caption(post["caption"])
+                
+                post['risk_score'] = risk_score
+                
+                # Logic to set the flag based on the score
+                if risk_score > 75:
+                    post['flag'] = "SCAM DETECTED"
+                elif risk_score > 40:
+                    post['flag'] = "Suspicious"
+                else:
+                    post['flag'] = "Safe"
+                    
+            except Exception as e:
+                print(f"   ❌ AI Error: {e}")
+                post['risk_score'] = -1
+                post['flag'] = "AI Error"
+        else:
+            # Fallback if AI engine is missing
+            post['risk_score'] = 0
+            post['flag'] = "AI Offline"
+            
         analyzed_feed.append(post)
 
-    # E. UPDATE CACHE
-    CACHED_FEED = analyzed_feed
-    LAST_FETCH_TIME = current_time
-    
+    print("✅ Response sent to frontend.")
     return analyzed_feed
