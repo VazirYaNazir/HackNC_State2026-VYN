@@ -1,10 +1,17 @@
 import React from "react";
 import { Text, View } from "react-native";
+import { Screen } from "../components/Screen";
+import { Colors } from "../theme/colors";
 
 export function HomeScreen() {
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Home (logged in)</Text>
-    </View>
+    <Screen>
+      <View style={{ padding: 16 }}>
+        <Text style={{ color: AppColors.text, fontSize: 22 }}>Home</Text>
+        <Text style={{ color: AppColors.mutedText, marginTop: 8 }}>
+          Using the palette everywhere.
+        </Text>
+      </View>
+    </Screen>
   );
 }
