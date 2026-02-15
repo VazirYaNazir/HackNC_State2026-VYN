@@ -1,9 +1,15 @@
+from pathlib import Path
+import sys
+REPO_ROOT = Path(__file__).resolve().parents[1]  # .../repo
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import ai_engine
 import feed_service
-from backend.src.googleapi import coords_to_geo
-from backend.src.xapi import get_posts_from_trends_as_real_tweets as get_trending_posts
+from src.googleapi import coords_to_geo
+from src.xapi import get_posts_from_trends_as_real_tweets as get_trending_posts
 from models import LocationData, PostData
 
 app = FastAPI()
