@@ -1,6 +1,8 @@
 from pathlib import Path
 import sys
-REPO_ROOT = Path(__file__).resolve().parents[1]  # .../repo
+
+# --- PATH SETUP ---
+REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -13,9 +15,11 @@ from src.xapi import get_posts_from_trends_as_real_tweets as get_trending_posts
 from models import LocationData, PostData
 
 app = FastAPI()
+
+# --- 1. GLOBAL STATE ---
+# We use this to store data between the POST and GET requests
 newsData = []
 
-# --- MIDDLEWARE ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,26 +28,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- MAIN ENDPOINT ---
 @app.get("/api")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Server is running"}
 
 # --- FEED ENDPOINT ---
 @app.get("/api/feed")
 def get_feed():
+    # This serves the Instagram-style feed (Mock + AI)
     return feed_service.generate_analyzed_feed()
     
-# --- LOCATION BASED TWITTER TRENDS ENDPOINT ---
+# --- LOCATION ENDPOINT (The Fix) ---
 @app.post("/api/submit-location")
 async def receive_location(loc: LocationData):
-    print(f"RECEIVED COORDINATES: {loc.latitude}, {loc.longitude}")
+    global newsData
+    
+    print(f"📍 RECEIVED COORDINATES: {loc.latitude}, {loc.longitude}")
+    
     try:
-        newsData = get_trending_posts(coords_to_geo(loc.latitude, loc.longitude), 10, 1)["posts"]
+        # 1. Convert Coords
+        geo_location = coords_to_geo(loc.latitude, loc.longitude)
+        print(f"🌎 Converted to Geo: {geo_location}")
+
+        # 2. Call API (Store response first)
+        response = get_trending_posts(geo_location, 10, 1)
+
+        # 3. SAFETY CHECK (Critical Fix 2)
+        # Check if response exists AND has the "posts" key
+        if response and "posts" in response:
+            newsData = response["posts"]
+        else:
+            newsData = [] # Clear old data if fails
+            return {"status": "error", "message": "No data found for location"}
+
     except Exception as e:
         print(f"Error occurred while fetching trending posts: {e}")
-        return {"error": str(e)}
-    
+        return {"status": "error", "detail": str(e)}
+
+# --- NEWS GETTER ---
 @app.get("/api/news")
 def get_news():
     return newsData
