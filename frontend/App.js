@@ -15,12 +15,21 @@ export default function App() {
   const [demoMode, setDemoMode] = useState(true);
   const [lightMode, setLightMode] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [disclaimerVisible, setDisclaimerVisible] = useState(true);
   const [blurLevel, setBlurLevel] = useState('none');
+  const [hideLevel, setHideLevel] = useState('none');
   const [unblurredImages, setUnblurredImages] = useState(new Set());
 
   useEffect(() => {
-    getLocationAndLoadData();
-  }, [demoMode]);
+    if (!disclaimerVisible) {
+      getLocationAndLoadData();
+    }
+  }, [demoMode, disclaimerVisible]);
+
+  const handleDisclaimerAccept = () => {
+    setDisclaimerVisible(false);
+    setLoading(true);
+  };
 
   const getLocationAndLoadData = async () => {
     setLoading(true);
@@ -90,6 +99,17 @@ export default function App() {
     setDemoMode(value);
   };
 
+  const shouldHidePost = (aiProb) => {
+    if (hideLevel === 'none') return false;
+    
+    const probPercent = aiProb * 100;
+    
+    if (hideLevel === 'likely_ai' && probPercent >= 70) return true;
+    if (hideLevel === 'uncertain' && probPercent >= 40) return true;
+    
+    return false;
+  };
+
   const shouldBlurImage = (postId, aiProb) => {
     if (unblurredImages.has(postId)) return false;
     if (blurLevel === 'none') return false;
@@ -137,6 +157,63 @@ export default function App() {
 
   const theme = getTheme();
 
+  // Disclaimer Modal
+  if (disclaimerVisible) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.bg }]}>
+        <StatusBar style={lightMode ? "dark" : "light"} />
+        <Modal
+          visible={true}
+          animationType="fade"
+          transparent={true}
+        >
+          <View style={styles.disclaimerOverlay}>
+            <View style={[styles.disclaimerContent, { backgroundColor: theme.cardBg }]}>
+              <Text style={[styles.disclaimerTitle, { color: theme.text }]}>
+                Important Notice
+              </Text>
+              
+              <ScrollView style={styles.disclaimerScroll} showsVerticalScrollIndicator={false}>
+                <Text style={[styles.disclaimerText, { color: theme.text }]}>
+                  SlopChop is an AI detection tool designed to assist users in identifying potentially AI-generated content. Please note:
+                </Text>
+                
+                <Text style={[styles.disclaimerPoint, { color: theme.text }]}>
+                  ✓ <Text style={styles.disclaimerBold}>Detection Accuracy:</Text> Our models provide probability estimates, not definitive proof. False positives and false negatives can occur.
+                </Text>
+                
+                <Text style={[styles.disclaimerPoint, { color: theme.text }]}>
+                  ✓ <Text style={styles.disclaimerBold}>Not Professional Verification:</Text> Do not rely solely on SlopChop for critical decisions. Always verify suspicious content through multiple sources.
+                </Text>
+                
+                <Text style={[styles.disclaimerPoint, { color: theme.text }]}>
+                  ✓ <Text style={styles.disclaimerBold}>Research-Based:</Text> Our approach is informed by peer-reviewed research, but AI detection remains an evolving field.
+                </Text>
+                
+                <Text style={[styles.disclaimerPoint, { color: theme.text }]}>
+                  ✓ <Text style={styles.disclaimerBold}>Privacy:</Text> We do not store or share the content you analyze.
+                </Text>
+                
+                <Text style={[styles.disclaimerFooter, { color: theme.subtext }]}>
+                  By using SlopChop, you acknowledge these limitations and agree to use the tool responsibly.
+                </Text>
+              </ScrollView>
+              
+              <View style={styles.disclaimerButtons}>
+                <TouchableOpacity 
+                  style={styles.disclaimerButton}
+                  onPress={handleDisclaimerAccept}
+                >
+                  <Text style={styles.disclaimerButtonText}>I Understand</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={[styles.centerContent, { backgroundColor: theme.bg }]}>
@@ -153,7 +230,6 @@ export default function App() {
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <StatusBar style={lightMode ? "dark" : "light"} />
 
-      {/* Header with Title and Settings */}
       <View style={[styles.header, { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
         <Text style={[styles.appTitle, { color: theme.text }]}>
           🔪 SlopChop
@@ -166,7 +242,6 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* Demo Mode Toggle */}
       <View style={[styles.demoBar, { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
         <Text style={[styles.demoText, { color: theme.text }]}>
           {demoMode ? 'Demo Feed' : 'Live News'}
@@ -179,7 +254,6 @@ export default function App() {
         />
       </View>
 
-      {/* Settings Modal */}
       <Modal
         visible={settingsVisible}
         animationType="slide"
@@ -190,7 +264,6 @@ export default function App() {
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Settings</Text>
             
-            {/* Light Mode Toggle */}
             <View style={styles.settingRow}>
               <Text style={[styles.settingLabel, { color: theme.text }]}>Light Mode</Text>
               <Switch
@@ -201,7 +274,6 @@ export default function App() {
               />
             </View>
 
-            {/* Blur Level Options */}
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Blur Images At:</Text>
             
             <TouchableOpacity 
@@ -234,6 +306,38 @@ export default function App() {
               <Text style={[styles.optionText, { color: theme.text }]}>Uncertain (40%+)</Text>
             </TouchableOpacity>
 
+            <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Hide Posts At:</Text>
+            
+            <TouchableOpacity 
+              style={styles.optionRow}
+              onPress={() => setHideLevel('none')}
+            >
+              <View style={styles.radio}>
+                {hideLevel === 'none' && <View style={styles.radioSelected} />}
+              </View>
+              <Text style={[styles.optionText, { color: theme.text }]}>None</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.optionRow}
+              onPress={() => setHideLevel('likely_ai')}
+            >
+              <View style={styles.radio}>
+                {hideLevel === 'likely_ai' && <View style={styles.radioSelected} />}
+              </View>
+              <Text style={[styles.optionText, { color: theme.text }]}>Likely AI (70%+)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.optionRow}
+              onPress={() => setHideLevel('uncertain')}
+            >
+              <View style={styles.radio}>
+                {hideLevel === 'uncertain' && <View style={styles.radioSelected} />}
+              </View>
+              <Text style={[styles.optionText, { color: theme.text }]}>Uncertain (40%+)</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity 
               style={styles.closeButton}
               onPress={() => setSettingsVisible(false)}
@@ -254,7 +358,9 @@ export default function App() {
             <Text style={[styles.emptyText, { color: theme.subtext }]}>No posts available</Text>
           </View>
         ) : (
-          posts.map((post) => (
+          posts
+            .filter(post => !shouldHidePost(post.ai_image_probability))
+            .map((post) => (
             <View key={post.id} style={[styles.postCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
               <View style={styles.postHeader}>
                 <Text style={[styles.username, { color: theme.text }]}>@{post.username}</Text>
@@ -269,7 +375,6 @@ export default function App() {
                 </View>
               </View>
               
-              {/* Post Image with Blur */}
               {post.image_url && (
                 <TouchableOpacity 
                   style={styles.imageContainer}
@@ -363,6 +468,62 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  disclaimerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  disclaimerContent: {
+    width: '100%',
+    maxWidth: 500,
+    borderRadius: 16,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  disclaimerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  disclaimerScroll: {
+    marginBottom: 20,
+  },
+  disclaimerText: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  disclaimerPoint: {
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  disclaimerBold: {
+    fontWeight: 'bold',
+  },
+  disclaimerFooter: {
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  disclaimerButtons: {
+    gap: 12,
+  },
+  disclaimerButton: {
+    backgroundColor: '#0a84ff',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  disclaimerButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -371,6 +532,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: width - 64,
+    maxHeight: '80%',
     borderRadius: 16,
     padding: 24,
   },
