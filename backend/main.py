@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import time
@@ -6,6 +7,13 @@ import random
 import ai_engine
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 USE_MOCK_ONLY = True 
 
@@ -17,24 +25,30 @@ class PostData(BaseModel):
     caption: str
     likes: int
     risk_score: int = 0
+    ai_image_probability: float = 0.0
     flag: str = "Analyzing"
 
-# --- 3. THE "GOLDEN" DATASET ---
-# These posts cover all your edge cases: Safe, Scam, and Borderline.
+class LocationData(BaseModel):
+    latitude: float
+    longitude: float
+    # Optional: Add timestamp or user_id if needed
+    # timestamp: Optional[float] = None 
+
+# --- 3. THE MOCK DATASET ---
 def get_mock_feed():
     return [
-        # SCAM 1: The obvious crypto scam
+        # SCAM 1
         {
             "id": "demo_scam_1",
             "username": "elon_giveaway_official",
-            # Use a placeholder or a real hosted image you control
             "image_url": "https://placehold.co/600x600/red/white?text=BTC+GIVEAWAY", 
             "caption": "URGENT: Doubling all BTC sent to my wallet! Link in bio! 🚀🔴 #crypto #giveaway #tesla",
             "likes": 5200,
-            "risk_score": 0, # AI will calculate this
+            "risk_score": 0,
+            "ai_image_probability": 0.0,
             "flag": "Pending"
         },
-        # SAFE 1: Standard Tech News
+        # SAFE 1
         {
             "id": "demo_safe_1",
             "username": "tech_crunch",
@@ -42,9 +56,10 @@ def get_mock_feed():
             "caption": "Breaking: OpenAI releases GPT-5 preview. The new model is 10x faster and safer. #ai #tech #future",
             "likes": 15400,
             "risk_score": 0,
+            "ai_image_probability": 0.0,
             "flag": "Pending"
         },
-        # SCAM 2: Phishing/Support Scam
+        # SCAM 2
         {
             "id": "demo_scam_2",
             "username": "instagram_support_team",
@@ -52,9 +67,10 @@ def get_mock_feed():
             "caption": "Your account has been locked due to suspicious activity. Click the link in our bio to verify your identity or your account will be deleted in 24 hours. 🔒",
             "likes": 45,
             "risk_score": 0,
+            "ai_image_probability": 0.0,
             "flag": "Pending"
         },
-        # SAFE 2: Lifestyle/Travel
+        # SAFE 2
         {
             "id": "demo_safe_2",
             "username": "travel_weekly",
@@ -62,6 +78,7 @@ def get_mock_feed():
             "caption": "Top 10 destinations to visit in Switzerland this winter. 🏔️🇨🇭 #travel #wanderlust",
             "likes": 8900,
             "risk_score": 0,
+            "ai_image_probability": 0.0,
             "flag": "Pending"
         }
     ]
@@ -69,23 +86,18 @@ def get_mock_feed():
 # --- 4. MAIN ENDPOINT ---
 @app.get("/feed")
 def get_feed():
-    print("⚡ Request received. Serving Simulation Feed...")
-    
-    # 1. Get the Raw Data
     feed = get_mock_feed()
-    
-    # 2. Run Real-Time Analysis
     analyzed_feed = []
     
     for post in feed:
-        # Check if AI is available
         if ai_engine:
             try:
-                print(f"   Running AI on post: {post['id']}...")
+                print(f"Running AI on post: {post['id']}...")
                 risk_score = ai_engine.scan_post_caption(post["caption"])
-                
+                ai_image_probability = ai_engine.get_ai_image_probability(post["image_url"])
                 post['risk_score'] = risk_score
-                
+                post['ai_image_probability'] = ai_image_probability
+
                 # Logic to set the flag based on the score
                 if risk_score > 75:
                     post['flag'] = "SCAM DETECTED"
@@ -107,3 +119,18 @@ def get_feed():
 
     print("✅ Response sent to frontend.")
     return analyzed_feed
+
+@app.post("/submit-location")
+async def receive_location(loc: LocationData):
+    print(f"RECEIVED COORDINATES: {loc.latitude}, {loc.longitude}")
+    
+
+    is_suspicious = False
+    if 12.0 <= loc.latitude <= 13.0: # Example logic
+        is_suspicious = True
+        
+    return {
+        "status": "success", 
+        "received": loc,
+        "risk_analysis": "High" if is_suspicious else "Safe"
+    }
