@@ -41,8 +41,8 @@ def get_mock_feed():
         {
             "id": "demo_scam_1",
             "username": "elon_giveaway_official",
-            "image_url": "https://placehold.co/600x600/red/white?text=BTC+GIVEAWAY", 
-            "caption": "URGENT: Doubling all BTC sent to my wallet! Link in bio! 🚀🔴 #crypto #giveaway #tesla",
+            "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlSP-QgB_POFLe9i3pdDlCabp4BYp0kfnIxA&s", 
+            "caption": "URGENT: Doubling all BTC sent to my wallet! Link in bio! Spots sell out fast! 🚀🔴 #crypto #giveaway #tesla",
             "likes": 5200,
             "risk_score": 0,
             "ai_image_probability": 0.0,
@@ -84,7 +84,11 @@ def get_mock_feed():
     ]
 
 # --- 4. MAIN ENDPOINT ---
-@app.get("/feed")
+@app.get("/api")
+async def root():
+    return {"message": "Hello World"}
+
+@app.get("/api/feed")
 def get_feed():
     feed = get_mock_feed()
     analyzed_feed = []
@@ -98,7 +102,6 @@ def get_feed():
                 post['risk_score'] = risk_score
                 post['ai_image_probability'] = ai_image_probability
 
-                # Logic to set the flag based on the score
                 if risk_score > 75:
                     post['flag'] = "SCAM DETECTED"
                 elif risk_score > 40:
@@ -107,30 +110,39 @@ def get_feed():
                     post['flag'] = "Safe"
                     
             except Exception as e:
-                print(f"   ❌ AI Error: {e}")
+                print(f"AI Error: {e}")
                 post['risk_score'] = -1
                 post['flag'] = "AI Error"
         else:
-            # Fallback if AI engine is missing
             post['risk_score'] = 0
             post['flag'] = "AI Offline"
             
         analyzed_feed.append(post)
 
-    print("✅ Response sent to frontend.")
     return analyzed_feed
 
-@app.post("/submit-location")
+@app.post("/api/submit-location")
 async def receive_location(loc: LocationData):
     print(f"RECEIVED COORDINATES: {loc.latitude}, {loc.longitude}")
-    
-
-    is_suspicious = False
-    if 12.0 <= loc.latitude <= 13.0: # Example logic
-        is_suspicious = True
-        
+    # Here you can add logic to store the location or use it elsewhere.
     return {
-        "status": "success", 
-        "received": loc,
-        "risk_analysis": "High" if is_suspicious else "Safe"
+        "message": "Location received",
+        "latitude": loc.latitude,
+        "longitude": loc.longitude
     }
+
+@app.get("/api/get-image")
+def getImage():
+    """
+    This is the endpoint for 
+    sending the twitter images to the frontend.
+    """
+    return
+
+@app.get("/api/get-news")
+def getNews():
+    """
+    This is the endpoint for 
+    sending the twitter news to the frontend.
+    """
+    return
