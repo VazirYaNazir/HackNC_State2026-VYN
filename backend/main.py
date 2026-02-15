@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
-import ai_engine  # Import the AI engine module we created
+import ai_engine
 import instaloader
 import pickle
 import os
@@ -56,7 +56,7 @@ class PostData(BaseModel):
 
 # --- 4. HELPER: MOCK FEED (Fallback) ---
 def get_mock_feed():
-    print("⚠️ Serving MOCK FEED (Safety Net)")
+    print("Serving MOCK FEED (Safety Net)")
     return [
         {
             "id": "mock_1",
@@ -138,7 +138,7 @@ def get_feed():
         {
             "id": "demo_scam_2",
             "username": "crypto_whale_99",
-            "image_url": "https://placehold.co/600x600/red/white?text=Free+Money",
+            "image_url": "https://coingape.com/wp-content/uploads/2023/11/Earn-Free-Ethereum.jpg",
             "caption": "Sending 1000 ETH to random followers! DM me 'WIN' now! 🚀",
             "likes": 5040,
             "risk_score": 0,
@@ -154,11 +154,11 @@ def get_feed():
     analyzed_feed = []
     for post in full_list:
         # Call the AI Engine
-        risk, flag = ai_engine.scan_post(post)
+        caption_AI = ai_engine.scan_post_caption(post["caption"])
         
         # Update the post
-        post['risk_score'] = risk
-        post['flag'] = flag
+        post['risk_score'] = caption_AI
+        post['flag'] = "SCAM DETECTED" if caption_AI > 75 else "No Flags"
         analyzed_feed.append(post)
 
     # E. UPDATE CACHE
