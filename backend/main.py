@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import ai_engine
 import feed_service
 from models import LocationData, PostData
+from googleapi import _coords_to_geo
 
 app = FastAPI()
 
@@ -28,24 +29,4 @@ def get_feed():
 async def receive_location(loc: LocationData):
     print(f"RECEIVED COORDINATES: {loc.latitude}, {loc.longitude}")
     # Here you can add logic to store the location or use it elsewhere.
-    return {
-        "message": "Location received",
-        "latitude": loc.latitude,
-        "longitude": loc.longitude
-    }
-
-@app.get("/api/get-image")
-def getImage():
-    """
-    This is the endpoint for 
-    sending the twitter images to the frontend.
-    """
-    return {"status": "not implemented yet"}
-
-@app.get("/api/get-news")
-def getNews():
-    """
-    This is the endpoint for 
-    sending the twitter news to the frontend.
-    """
-    return {"status": "not implemented yet"}
+    return _coords_to_geo(loc.latitude, loc.longitude)
