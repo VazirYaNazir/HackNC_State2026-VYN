@@ -37,7 +37,7 @@ def get_mock_feed():
         {
             "id": "demo_safe_2",
             "username": "charlesschwab",
-            "image_url": "https://learn-attachment.microsoft.com/api/attachments/2099d340-79fa-4ac1-89e3-b38115071bbd?platform=QnA",
+            "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkKml82T0pnTgEwmpStvW2jXBsiWnoqarSdw&s",
             "caption": "Leveling up to 70k FOLLOWERS! We're thankful for each and every one of you for following along with us.",
             "likes": 161,
             "risk_score": 0,
@@ -122,7 +122,7 @@ def generate_analyzed_feed():
     Fetches the mock feed and runs the AI engine on each post.
     """
     feed = get_mock_feed()
-    _inject_hero_post(feed, "microsoft_support_team", 1)
+    _inject_hero_post(feed, "microsoft_support_team")
 
     analyzed_feed = []
     
@@ -141,12 +141,12 @@ def generate_analyzed_feed():
             post['ai_image_probability'] = ai_prob
 
             # 4. Set Flags based on score
-            if risk_score > 75:
-                post['flag'] = "SCAM DETECTED"
+            if (risk_score + ai_prob) / 2 > 75:
+                post['flag'] = "Likely AI/Scam"
             elif risk_score > 40:
-                post['flag'] = "Suspicious"
+                post['flag'] = "Uncertain"
             else:
-                post['flag'] = "Safe"
+                post['flag'] = "Likely Human"
                 
         except Exception as e:
             print(f"AI Error on {post['id']}: {e}")
@@ -157,23 +157,28 @@ def generate_analyzed_feed():
 
     return analyzed_feed
 
-def _inject_hero_post(feed_list, hero_id, target_index=1):
+def _inject_hero_post(feed_list, hero_id):
     """
-    Shuffles the feed but ensures the 'hero' post is at a specific index.
+    Shuffles the feed and places the 'hero' post randomly 
+    in the top 3 positions (Index 0, 1, or 2).
     """
-    # Find the hero
+    # 1. Find the hero
     hero_post = next((item for item in feed_list if item["id"] == hero_id), None)
     
-    # Get everyone else
+    # 2. Get everyone else
     others = [item for item in feed_list if item["id"] != hero_id]
     
-    # Shuffle the rest
+    # 3. Shuffle the rest
     random.shuffle(others)
     
-    # Insert Hero back in (if it exists)
+    # 4. Insert Hero randomly in the top 3 spots
     if hero_post:
-        # Ensure index isn't out of bounds
-        insert_idx = min(target_index, len(others))
+        # Pick a random number: 0, 1, or 2
+        # 0 = Very Top
+        # 1 = Second Post
+        # 2 = Third Post
+        random_idx = random.randint(0, 2)
+        insert_idx = min(random_idx, len(others))
         others.insert(insert_idx, hero_post)
         
     return others
