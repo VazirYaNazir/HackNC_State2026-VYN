@@ -1,74 +1,66 @@
-import instaloader
-import pickle
-import os
+import sys
 import json
+import time
 
-# --- CONFIGURATION ---
-SESSION_FILENAME = "backend/session-quackpromax" 
+# Tweak path to ensure we can import from the current directory
+sys.path.append('.')
 
-def inspect_feed_data():
-    print("🔍 INITIALIZING DATA INSPECTOR...")
+print("🔍 INITIALIZING SIMULATION FEED TEST...")
+print("-" * 50)
+
+try:
+    # 1. IMPORT YOUR MAIN APP
+    # This verifies that all imports (like ai_engine) are working
+    from main import get_feed
+    print("✅ Successfully imported backend.main")
+    
+except ImportError as e:
+    print(f"❌ CRITICAL ERROR: Could not import main.py: {e}")
+    print("💡 Make sure you are running this from the 'backend/' folder.")
+    sys.exit(1)
+
+# 2. RUN THE FEED GENERATION
+print("🔄 Generating Feed & Running AI Analysis...")
+start_time = time.time()
+
+try:
+    # This calls the exact same function your React Native app will hit
+    feed_data = get_feed()
+    
+    end_time = time.time()
+    duration = round(end_time - start_time, 2)
+    
+    print(f"✅ Feed Generated in {duration} seconds.")
     print("-" * 50)
 
-    # 1. LOAD SESSION
-    L = instaloader.Instaloader()
-    try:
-        if not os.path.exists(SESSION_FILENAME):
-            print(f"❌ Error: Session file '{SESSION_FILENAME}' not found.")
-            return
-
-        with open(SESSION_FILENAME, 'rb') as f:
-            data = pickle.load(f)
-            if isinstance(data, dict):
-                L.context._session.cookies.update(data)
-            else:
-                L.load_session_from_file("quackpromax", filename=SESSION_FILENAME)
-        print(f"✅ Session Loaded for: {L.context.username}")
-
-    except Exception as e:
-        print(f"❌ Session Load Failed: {e}")
-        return
-
-    # 2. FETCH LIVE FEED
-    print("🔄 Fetching live feed from Instagram...")
-    try:
-        # Get the actual home feed
-        posts = L.get_feed_posts()
+    # 3. INSPECT THE OUTPUT
+    for post in feed_data:
+        # Check if AI actually worked
+        score = post.get('risk_score', 'N/A')
+        flag = post.get('flag', 'N/A')
         
-        count = 0
-        print("\n📢 --- DATA SENT TO AI MODEL ---")
+        print(f"📄 POST ID: {post['id']}")
+        print(f"   User:    {post['username']}")
+        print(f"   Caption: {post['caption'][:60]}...")
+        print(f"   ❤️  Likes: {post['likes']}")
         
-        for post in posts:
-            if count >= 3: break # Only show top 3 posts
+        # VISUAL CHECK FOR AI
+        if score > 75:
+            print(f"   🚨 RISK SCORE: {score} (HIGH RISK)")
+        elif score > 0:
+            print(f"   ⚠️ RISK SCORE: {score} (Moderate)")
+        else:
+            print(f"   ✅ RISK SCORE: {score} (Safe)")
             
-            # 3. CONSTRUCT THE EXACT DATA PACKET
-            # This mimics the 'ModelInput' class we defined earlier
-            ai_data_packet = {
-                "post_id": post.shortcode,
-                "caption": post.caption if post.caption else "[NO CAPTION]",
-                "image_url": post.url,
-                "metadata": {
-                    "username": post.owner_username,
-                    "likes": post.likes,
-                    "timestamp": str(post.date_local)
-                }
-            }
-            
-            # 4. PRETTY PRINT THE DATA
-            print(f"\n📄 POST #{count + 1} ({post.owner_username})")
-            print(f"   ID: {ai_data_packet['post_id']}")
-            print(f"   Caption Preview: \"{ai_data_packet['caption'][:100]}...\"")
-            print(f"   Image URL: {ai_data_packet['image_url'][:50]}...")
-            
-            # DUMP RAW JSON (So you can copy-paste to your teammate)
-            print("   ⬇️ RAW JSON FOR AI:")
-            print(json.dumps(ai_data_packet, indent=4))
-            print("-" * 50)
-            
-            count += 1
-            
-    except Exception as e:
-        print(f"❌ Error fetching feed: {e}")
+        print(f"   🚩 FLAG: {flag}")
+        print("-" * 30)
 
-if __name__ == "__main__":
-    inspect_feed_data()
+    # 4. JSON EXPORT (Optional)
+    # Allows you to see the exact structure
+    print("\n⬇️ RAW JSON SAMPLE (First Post):")
+    print(json.dumps(feed_data[0], indent=4))
+
+except Exception as e:
+    print(f"❌ TEST FAILED: {e}")
+    import traceback
+    traceback.print_exc()

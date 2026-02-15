@@ -4,6 +4,7 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipe
 from PIL import Image
 import torch
 import torch.nn.functional as F
+from io import BytesIO
 
 image_detector = pipeline("image-classification", model="Organika/sdxl-detector")
 
@@ -31,8 +32,8 @@ def get_ai_text_percentage(text):
         weight_sum += info["weight"]
     return round(total / weight_sum, 1)
 
-def get_ai_image_probability(img_path: str) -> float:
-    img = Image.open(img_path).convert("RGB")
+def get_ai_image_probability(img_url: str) -> float:
+    img = Image.open(BytesIO(response.content)).convert("RGB")
     results = image_detector(img)
 
     for r in results:
