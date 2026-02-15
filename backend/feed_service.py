@@ -63,6 +63,46 @@ def get_mock_feed():
             "risk_score": 0,
             "ai_image_probability": 0.0,
             "flag": "Pending"
+        },
+        {
+            "id": "demo_safe_4",
+            "username": "the_verge",
+            "image_url": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b",
+            "caption": "Review: The new M5 MacBook Pro is a beast, but is it worth the upgrade? Read our full breakdown on the site. 💻 #apple #tech #review",
+            "likes": 176086,
+            "risk_score": 0,
+            "ai_image_probability": 0.0,
+            "flag": "Pending"
+        },
+        {
+            "id": "demo_safe_5",
+            "username": "natgeo",
+            "image_url": "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
+            "caption": "Picturesque mountains framing the sunset through the fog 🌄 #nature #photography",
+            "likes": 25643,
+            "risk_score": 0,
+            "ai_image_probability": 0.0,
+            "flag": "Pending"
+        },
+        {
+            "id": "demo_safe_6",
+            "username": "coffee_and_code",
+            "image_url": "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
+            "caption": "Finally finished the backend API! ☕💻 Time to relax. What are you all working on this weekend? #coding #developer #relax",
+            "likes": 104932,
+            "risk_score": 0,
+            "ai_image_probability": 0.0,
+            "flag": "Pending"
+        },
+        {
+            "id": "demo_scam_4",
+            "username": "passive_income_king",
+            "image_url": "https://images.unsplash.com/photo-1559526324-4b87b5e36e44", 
+            "caption": "Stop working 9-5! 🛑 I made $40k this month using this simple trading bot. DM me 'FREEDOM' to get the blueprint. 📉📈 #passiveincome #forex #dropshipping",
+            "likes": 8932,
+            "risk_score": 0,
+            "ai_image_probability": 0.0,
+            "flag": "Pending"
         }
     ]
 
