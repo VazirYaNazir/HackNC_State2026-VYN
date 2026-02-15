@@ -1,6 +1,6 @@
 ## SlopChop
 
-AI-powered misinformation detection for social media. SlopChop analyzes posts using multi-modal AI detection to classify content as 'likely human,' 'uncertain,' or 'likely AI/scam.'
+An AI-powered 'anti-virus for your social feed' that uses multi-modal AI to classify content as 'likely human', 'uncertain' or 'likely AI/scam'. We use a visible risk score metric for every post, with the option to blur or hide flagged content to protect users and provide a pleasant experience when on social media.
 
 ## Features
 
